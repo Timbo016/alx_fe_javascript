@@ -123,3 +123,138 @@ function importFromJsonFile(event) {
   };
   fileReader.readAsText(event.target.files[0]);
 }
+
+
+
+
+
+
+
+
+
+// Load quotes from localStorage or use default
+let quotes = JSON.parse(localStorage.getItem("quotes")) || [
+  { text: "The best way to predict the future is to create it.", category: "Motivation" },
+  { text: "Life is what happens when you’re busy making other plans.", category: "Life" },
+  { text: "Do not pray for an easy life, pray for the strength to endure a difficult one.", category: "Wisdom" },
+  { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", category: "Success" }
+];
+
+// Save quotes to local storage
+function saveQuotes() {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
+
+// Show random quote
+function showRandomQuote() {
+  let randomIndex = Math.floor(Math.random() * quotes.length);
+  let randomQuote = quotes[randomIndex];
+
+  displayQuote(randomQuote);
+
+  // Save last viewed quote in session storage
+  sessionStorage.setItem("lastQuote", JSON.stringify(randomQuote));
+}
+
+// Display a single quote in the DOM
+function displayQuote(quote) {
+  let displayDiv = document.getElementById("quoteDisplay");
+  displayDiv.innerHTML = `
+    <p>"${quote.text}"</p>
+    <small><em>- Category: ${quote.category}</em></small>
+  `;
+}
+
+// Display multiple quotes (for filter)
+function displayQuotes(quotesToDisplay) {
+  let displayDiv = document.getElementById("quoteDisplay");
+  displayDiv.innerHTML = "";
+
+  if (quotesToDisplay.length === 0) {
+    displayDiv.innerHTML = "<p>No quotes found in this category.</p>";
+    return;
+  }
+
+  quotesToDisplay.forEach(q => {
+    let quoteText = document.createElement("p");
+    quoteText.textContent = `"${q.text}"`;
+
+    let quoteCategory = document.createElement("small");
+    quoteCategory.innerHTML = `<em>- Category: ${q.category}</em>`;
+
+    displayDiv.appendChild(quoteText);
+    displayDiv.appendChild(quoteCategory);
+  });
+}
+
+// Add a new quote
+function addQuote() {
+  let textInput = document.getElementById("newQuoteText").value;
+  let categoryInput = document.getElementById("newQuoteCategory").value;
+
+  if (textInput && categoryInput) {
+    quotes.push({ text: textInput, category: categoryInput });
+    saveQuotes();
+
+    displayQuote({ text: textInput, category: categoryInput });
+
+    document.getElementById("newQuoteText").value = "";
+    document.getElementById("newQuoteCategory").value = "";
+
+    populateCategories(); // update dropdown if new category introduced
+  }
+}
+
+// Populate category dropdown dynamically
+function populateCategories() {
+  let filter = document.getElementById("categoryFilter");
+
+  // Clear previous categories except "All Categories"
+  filter.innerHTML = '<option value="all">All Categories</option>';
+
+  let categories = [...new Set(quotes.map(q => q.category))]; // unique categories
+
+  categories.forEach(cat => {
+    let option = document.createElement("option");
+    option.value = cat;
+    option.textContent = cat;
+    filter.appendChild(option);
+  });
+
+  // Restore last selected filter from localStorage
+  let savedFilter = localStorage.getItem("selectedCategory");
+  if (savedFilter) {
+    filter.value = savedFilter;
+    filterQuotes(); // apply immediately
+  }
+}
+
+// Filter quotes based on category
+function filterQuotes() {
+  let selectedCategory = document.getElementById("categoryFilter").value;
+  localStorage.setItem("selectedCategory", selectedCategory); // persist filter
+
+  if (selectedCategory === "all") {
+    displayQuotes(quotes);
+  } else {
+    let filtered = quotes.filter(q => q.category === selectedCategory);
+    displayQuotes(filtered);
+  }
+}
+
+// Event listeners
+document.getElementById("newQuote").addEventListener("click", showRandomQuote);
+
+// On page load
+window.onload = function() {
+  populateCategories();
+
+  // Load last viewed quote if sessionStorage has it
+  let lastQuote = sessionStorage.getItem("lastQuote");
+  if (lastQuote) {
+    displayQuote(JSON.parse(lastQuote));
+  } else {
+    displayQuotes(quotes);
+  }
+};
+
