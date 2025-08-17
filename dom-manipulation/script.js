@@ -258,3 +258,67 @@ window.onload = function() {
   }
 };
 
+
+
+
+
+
+
+// ====== SERVER SYNC SIMULATION ======
+
+// Fake server data (simulating JSONPlaceholder or mock API)
+let serverQuotes = [
+  { text: "Server: Success is not final, failure is not fatal.", author: "Winston Churchill" },
+  { text: "Server: The best way to predict the future is to create it.", author: "Peter Drucker" }
+];
+
+// Fetch server quotes (simulation)
+function fetchServerQuotes() {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(serverQuotes);
+    }, 1000); // simulate network delay
+  });
+}
+
+// Sync quotes with server (server data takes precedence)
+async function syncQuotes() {
+  try {
+    const localQuotes = JSON.parse(localStorage.getItem("quotes")) || [];
+    const fetchedQuotes = await fetchServerQuotes();
+
+    // Conflict resolution: server data wins
+    const mergedQuotes = [...fetchedQuotes, ...localQuotes.filter(lq =>
+      !fetchedQuotes.some(sq => sq.text === lq.text)
+    )];
+
+    // Save merged result back to localStorage
+    localStorage.setItem("quotes", JSON.stringify(mergedQuotes));
+
+    // Notify user
+    const notification = document.getElementById("syncNotification");
+    notification.textContent = "Conflicts resolved: Server data has been synced.";
+    notification.style.display = "block";
+
+    setTimeout(() => {
+      notification.style.display = "none";
+    }, 3000);
+  } catch (error) {
+    console.error("Error syncing quotes:", error);
+  }
+}
+
+// Auto sync every 10 seconds (simulating background server sync)
+setInterval(syncQuotes, 10000);
+
+// Manual sync via button
+document.getElementById("syncBtn").addEventListener("click", syncQuotes);
+
+// ====== TWEET MILESTONE ======
+document.getElementById("tweetMilestone").addEventListener("click", (e) => {
+  e.preventDefault();
+  const tweetText = encodeURIComponent("I just built a Dynamic Quote Generator with server sync & conflict resolution!");
+  window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, "_blank");
+});
+
+
