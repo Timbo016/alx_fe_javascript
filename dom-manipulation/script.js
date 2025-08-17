@@ -1,5 +1,5 @@
-// Initial quotes array
-let quotes = [
+// Initial quotes array with text and category properties
+const quotes = [
   { text: "The only way to do great work is to love what you do.", category: "inspiration" },
   { text: "Innovation distinguishes between a leader and a follower.", category: "leadership" },
   { text: "Your time is limited, don't waste it living someone else's life.", category: "life" },
@@ -17,18 +17,18 @@ const categoryFilter = document.getElementById('categoryFilter');
 // Initialize the application
 function init() {
   // Set up event listeners
-  newQuoteBtn.addEventListener('click', showRandomQuote);
+  newQuoteBtn.addEventListener('click', displayRandomQuote); // Changed to displayRandomQuote
   showAddFormBtn.addEventListener('click', showAddForm);
   
   // Populate category filter
   updateCategoryFilter();
   
   // Show initial random quote
-  showRandomQuote();
+  displayRandomQuote(); // Changed to displayRandomQuote
 }
 
-// Display a random quote
-function showRandomQuote() {
+// Display a random quote (renamed from showRandomQuote to displayRandomQuote)
+function displayRandomQuote() {
   const selectedCategory = categoryFilter.value;
   let filteredQuotes = quotes;
   
@@ -89,7 +89,7 @@ function addQuote() {
   hideAddForm();
   
   // Show the new quote
-  showRandomQuote();
+  displayRandomQuote(); // Changed to displayRandomQuote
 }
 
 // Update the category filter dropdown
@@ -110,7 +110,7 @@ function updateCategoryFilter() {
 }
 
 // Set up event listener for category filter
-categoryFilter.addEventListener('change', showRandomQuote);
+categoryFilter.addEventListener('change', displayRandomQuote); // Changed to displayRandomQuote
 
 // Initialize the app when the DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
