@@ -264,61 +264,125 @@ window.onload = function() {
 
 
 
-// ====== SERVER SYNC SIMULATION ======
+/***** ========== CORE: QUOTES + STORAGE ========== *****/
 
-// Fake server data (simulating JSONPlaceholder or mock API)
-let serverQuotes = [
-  { text: "Server: Success is not final, failure is not fatal.", author: "Winston Churchill" },
-  { text: "Server: The best way to predict the future is to create it.", author: "Peter Drucker" }
-];
+// Safe load from localStorage (fallback to defaults)
+function loadQuotes() {
+  try {
+    const raw = localStorage.getItem("quotes");
+    if (!raw) return [
+      { text: "The best way to predict the future is to create it.", category: "Motivation" },
+      { text: "Life is what happens when you’re busy making other plans.", category: "Life" },
+      { text: "Do not pray for an easy life, pray for the strength to endure a difficult one.", category: "Wisdom" },
+      { text: "Success is not final, failure is not fatal: it is the courage to continue that counts.", category: "Success" }
+    ];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+let quotes = loadQuotes();
 
-// Fetch server quotes (simulation)
-function fetchServerQuotes() {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(serverQuotes);
-    }, 1000); // simulate network delay
+function saveQuotes() {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
+
+/***** ========== UI HELPERS ========== *****/
+
+function getEl(id) { return document.getElementById(id) || null; }
+
+function displayQuote(quote) {
+  const displayDiv = getEl("quoteDisplay");
+  if (!displayDiv || !quote) return;
+  displayDiv.innerHTML = `
+    <p>"${quote.text}"</p>
+    <small><em>- Category: ${quote.category}</em></small>
+  `;
+}
+
+function displayQuotes(list) {
+  const displayDiv = getEl("quoteDisplay");
+  if (!displayDiv) return;
+  displayDiv.innerHTML = "";
+  if (!list || list.length === 0) {
+    displayDiv.innerHTML = "<p>No quotes to show.</p>";
+    return;
+  }
+  list.forEach(q => {
+    const p = document.createElement("p");
+    p.textContent = `"${q.text}"`;
+    const s = document.createElement("small");
+    s.innerHTML = `<em>- Category: ${q.category}</em>`;
+    displayDiv.appendChild(p);
+    displayDiv.appendChild(s);
   });
 }
 
-// Sync quotes with server (server data takes precedence)
-async function syncQuotes() {
-  try {
-    const localQuotes = JSON.parse(localStorage.getItem("quotes")) || [];
-    const fetchedQuotes = await fetchServerQuotes();
-
-    // Conflict resolution: server data wins
-    const mergedQuotes = [...fetchedQuotes, ...localQuotes.filter(lq =>
-      !fetchedQuotes.some(sq => sq.text === lq.text)
-    )];
-
-    // Save merged result back to localStorage
-    localStorage.setItem("quotes", JSON.stringify(mergedQuotes));
-
-    // Notify user
-    const notification = document.getElementById("syncNotification");
-    notification.textContent = "Conflicts resolved: Server data has been synced.";
-    notification.style.display = "block";
-
-    setTimeout(() => {
-      notification.style.display = "none";
-    }, 3000);
-  } catch (error) {
-    console.error("Error syncing quotes:", error);
+function notify(message, visibleMs = 3000) {
+  const n = getEl("syncNotification");
+  if (!n) return;
+  n.textContent = message;
+  n.style.display = "block";
+  if (visibleMs > 0) {
+    setTimeout(() => { n.style.display = "none"; }, visibleMs);
   }
 }
 
-// Auto sync every 10 seconds (simulating background server sync)
-setInterval(syncQuotes, 10000);
+/***** ========== EXISTING FEATURES (kept) ========== *****/
 
-// Manual sync via button
-document.getElementById("syncBtn").addEventListener("click", syncQuotes);
+function showRandomQuote() {
+  if (!quotes.length) return;
+  const idx = Math.floor(Math.random() * quotes.length);
+  const q = quotes[idx];
+  displayQuote(q);
+  try { sessionStorage.setItem("lastQuote", JSON.stringify(q)); } catch {}
+}
 
-// ====== TWEET MILESTONE ======
-document.getElementById("tweetMilestone").addEventListener("click", (e) => {
-  e.preventDefault();
-  const tweetText = encodeURIComponent("I just built a Dynamic Quote Generator with server sync & conflict resolution!");
-  window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, "_blank");
-});
+function addQuote() {
+  const textInput = getEl("newQuoteText");
+  const categoryInput = getEl("newQuoteCategory");
+  if (!textInput || !categoryInput) return;
 
+  const text = textInput.value.trim();
+  const category = categoryInput.value.trim();
+  if (!text || !category) return;
 
+  quotes.push({ text, category });
+  saveQuotes();
+  displayQuote({ text, category });
+
+  textInput.value = "";
+  categoryInput.value = "";
+
+  // If category filter exists, refresh it
+  if (typeof populateCategories === "function") populateCategories();
+}
+
+/***** ========== OPTIONAL: IMPORT / EXPORT (kept to avoid missing refs) ========== *****/
+
+function exportToJsonFile() {
+  const dataStr = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importFromJsonFile(event) {
+  const fileReader = new FileReader();
+  fileReader.onload = function(e) {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) throw new Error("Invalid JSON");
+      // Normalize to {text, category}
+      const normalized = imported
+        .filter(item => item && item.text)
+        .map(item => ({
+          text: String(item.text),
+          category: item.category ? String(item.category) : "Imported"
+        }));
+      // Merge (local
