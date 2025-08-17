@@ -54,3 +54,33 @@ function addQuote() {
     document.getElementById("newQuoteCategory").value = "";
   }
 }
+
+// Function to dynamically create the Add Quote form
+function createAddQuoteForm() {
+  let formContainer = document.getElementById("formContainer");
+
+  // Create text input
+  let textInput = document.createElement("input");
+  textInput.id = "newQuoteText";
+  textInput.type = "text";
+  textInput.placeholder = "Enter a new quote";
+
+  // Create category input
+  let categoryInput = document.createElement("input");
+  categoryInput.id = "newQuoteCategory";
+  categoryInput.type = "text";
+  categoryInput.placeholder = "Enter quote category";
+
+  // Create Add button
+  let addButton = document.createElement("button");
+  addButton.textContent = "Add Quote";
+  addButton.addEventListener("click", addQuote);
+
+  // Append to form container
+  formContainer.appendChild(textInput);
+  formContainer.appendChild(categoryInput);
+  formContainer.appendChild(addButton);
+}
+
+// Call to generate form on page load
+createAddQuoteForm();
