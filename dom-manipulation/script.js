@@ -280,3 +280,95 @@ window.addEventListener("load", () => {
   // Prepare filter dropdown if present
   populateCategories();
 });
+
+
+
+let quotes = JSON.parse(localStorage.getItem("quotes")) || [];
+const quotesList = document.getElementById("quotes-list");
+const quoteInput = document.getElementById("quote-input");
+const addQuoteBtn = document.getElementById("add-quote-btn");
+const exportBtn = document.getElementById("export-btn");
+
+// ✅ Step 1: Fetch quotes from "server"
+async function fetchQuotesFromServer() {
+  try {
+    const response = await fetch("https://jsonplaceholder.typicode.com/posts");
+    const data = await response.json();
+    // Take first 5 items and map to quotes
+    return data.slice(0, 5).map(item => item.title);
+  } catch (error) {
+    console.error("Error fetching quotes:", error);
+    return [];
+  }
+}
+
+// ✅ Step 2: Sync local storage with server
+async function syncWithServer() {
+  const serverQuotes = await fetchQuotesFromServer();
+  let updated = false;
+
+  serverQuotes.forEach(serverQuote => {
+    if (!quotes.includes(serverQuote)) {
+      quotes.push(serverQuote);
+      updated = true;
+    }
+  });
+
+  if (updated) {
+    localStorage.setItem("quotes", JSON.stringify(quotes));
+    renderQuotes();
+    showNotification("Quotes synced with server (server data takes precedence).");
+  }
+}
+
+// ✅ Step 3: Show notification in UI
+function showNotification(message) {
+  const notification = document.createElement("div");
+  notification.textContent = message;
+  notification.className = "notification";
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+
+// ✅ Step 4: Render quotes
+function renderQuotes() {
+  quotesList.innerHTML = "";
+  quotes.forEach(q => {
+    const li = document.createElement("li");
+    li.textContent = q;
+    quotesList.appendChild(li);
+  });
+}
+
+// ✅ Add new quote
+addQuoteBtn.addEventListener("click", () => {
+  const newQuote = quoteInput.value.trim();
+  if (newQuote) {
+    quotes.push(newQuote);
+    localStorage.setItem("quotes", JSON.stringify(quotes));
+    renderQuotes();
+    quoteInput.value = "";
+  }
+});
+
+// ✅ Export quotes
+exportBtn.addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(quotes, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "quotes.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ✅ Run sync periodically (every 10s for demo)
+setInterval(syncWithServer, 10000);
+
+// ✅ Initial load
+renderQuotes();
+syncWithServer();
+
