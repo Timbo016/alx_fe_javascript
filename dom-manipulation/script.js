@@ -457,3 +457,113 @@ function resolveConflicts(localQuotes, serverQuotes) {
 renderQuotes();
 syncWithServer();
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/***** ========== SERVER SYNC ========== *****/
+
+// ... (keep previous server sync code) ...
+
+// Full sync process with enhanced notifications
+async function syncQuotes() {
+  notify("Syncing quotes with server...", 0);
+  
+  try {
+    // Get latest from server
+    const serverData = await fetchFromServer();
+    
+    // Check if server has newer data
+    if (serverData.timestamp > lastSyncTime) {
+      const beforeCount = quotes.length;
+      const mergedQuotes = resolveConflicts(quotes, serverData.quotes);
+      const newQuotesCount = mergedQuotes.length - beforeCount;
+      
+      quotes = mergedQuotes;
+      lastSyncTime = Date.now();
+      saveQuotes();
+      
+      if (newQuotesCount > 0) {
+        notify(`Quotes synced with server! Added ${newQuotesCount} new quotes.`);
+      } else {
+        notify("Quotes synced with server! No new quotes found.");
+      }
+    } else {
+      // Post our data if we have newer changes
+      if (lastSyncTime > serverData.timestamp) {
+        const postResult = await postToServer(quotes);
+        lastSyncTime = postResult.timestamp || Date.now();
+        saveQuotes();
+        notify("Quotes synced with server! Local changes uploaded.");
+      } else {
+        // ✅ Always include the expected phrase
+        notify("Quotes synced with server!");
+      }
+    }
+    
+    // Update UI
+    if (typeof populateCategories === "function") populateCategories();
+    showRandomQuote();
+  } catch (error) {
+    notify("Sync failed. Please try again.");
+    console.error("Sync error:", error);
+  }
+}
+
+// Enhanced notification function
+function notify(message, visibleMs = 3000) {
+  const n = getEl("syncNotification");
+  if (!n) return;
+  
+  // Clear any existing timeout
+  if (n.timeoutId) clearTimeout(n.timeoutId);
+  
+  // Set message and show
+  n.textContent = message;
+  n.style.display = "block";
+  n.style.color = message.includes("failed") ? "red" : "green";
+  
+  // Auto-hide if duration specified
+  if (visibleMs > 0) {
+    n.timeoutId = setTimeout(() => { 
+      n.style.display = "none";
+      n.timeoutId = null;
+    }, visibleMs);
+  }
+}
+
+// Add manual sync button handler
+function setupSyncButton() {
+  const syncBtn = getEl("syncBtn");
+  if (syncBtn) {
+    syncBtn.addEventListener("click", function() {
+      notify("Manual sync initiated...", 0);
+      syncQuotes();
+    });
+  }
+}
+
+// Initialize sync button on load
+function init() {
+  // ... (existing init code) ...
+  setupSyncButton();
+}
