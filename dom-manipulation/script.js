@@ -368,6 +368,91 @@ exportBtn.addEventListener("click", () => {
 // ✅ Run sync periodically (every 10s for demo)
 setInterval(syncWithServer, 10000);
 
+
+/***** ========== SERVER SYNC ========== *****/
+
+// Mock server URL (using JSONPlaceholder)
+const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+// Simulate server data structure
+function toServerFormat(localQuotes) {
+  return {
+    id: 1, // Fixed ID for our mock
+    title: "Quote Data",
+    body: JSON.stringify({
+      quotes: localQuotes,
+      timestamp: Date.now()
+    }),
+    userId: 1
+  };
+}
+
+function fromServerFormat(serverData) {
+  try {
+    const parsed = JSON.parse(serverData.body);
+    return {
+      quotes: parsed.quotes || [],
+      timestamp: parsed.timestamp || 0
+    };
+  } catch {
+    return { quotes: [], timestamp: 0 };
+  }
+}
+
+// Fetch quotes from server
+async function fetchFromServer() {
+  try {
+    const response = await fetch(`${SERVER_URL}/1`);
+    if (!response.ok) throw new Error('Server error');
+    const data = await response.json();
+    return fromServerFormat(data);
+  } catch (error) {
+    console.error('Fetch error:', error);
+    return { quotes: [], timestamp: 0 };
+  }
+}
+
+// Post quotes to server - UPDATED WITH PROPER POST CONFIGURATION
+async function postToServer(quotesToPost) {
+  try {
+    const response = await fetch(SERVER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(toServerFormat(quotesToPost))
+    });
+    
+    if (!response.ok) throw new Error('Post failed');
+    const data = await response.json();
+    return fromServerFormat(data);
+  } catch (error) {
+    console.error('Post error:', error);
+    return { quotes: [], timestamp: 0 };
+  }
+}
+
+// Conflict resolution strategy
+function resolveConflicts(localQuotes, serverQuotes) {
+  // Simple strategy: server wins for conflicts
+  const localMap = new Map(localQuotes.map(q => [q.text, q]));
+  const serverMap = new Map(serverQuotes.map(q => [q.text, q]));
+  
+  // Merge with server taking precedence
+  const merged = [];
+  const allTexts = new Set([...localMap.keys(), ...serverMap.keys()]);
+  
+  for (const text of allTexts) {
+    if (serverMap.has(text)) {
+      merged.push(serverMap.get(text));
+    } else if (localMap.has(text)) {
+      merged.push(localMap.get(text));
+    }
+  }
+  
+  return merged;
+}
+
 // ✅ Initial load
 renderQuotes();
 syncWithServer();
